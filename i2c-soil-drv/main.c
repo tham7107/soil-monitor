@@ -27,12 +27,7 @@ struct i2c_soil_dev i2c_soil_device;
 
 int i2c_soil_drv_open(struct inode *inode, struct file *filp)
 {
-    struct i2c_soil_dev *pdev;
-
     PDEBUG("open");
-    /**
-     * TODO: handle open
-     */
 
     // Use container_of macro to get pointer to the i2c_soil_dev and
     // store in filp->private_data. If i2c_soil_dev has no fields
@@ -47,13 +42,13 @@ int i2c_soil_drv_open(struct inode *inode, struct file *filp)
 int i2c_soil_drv_release(struct inode *inode, struct file *filp)
 {
     PDEBUG("release");
-    /**
-     * TODO: handle release
-     */
+
     // Nothing to do - release is the opposite of open, but we don't
     // do anything in open that needs to be undone.
     return 0;
 }
+
+// Returns negative on error, >=0 indicated # of bytes read.
 ssize_t i2c_soil_drv_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
@@ -62,32 +57,117 @@ ssize_t i2c_soil_drv_read(struct file *filp, char __user *buf, size_t count,
     ssize_t retval = 0;
 
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
-    PDEBUG("read: user buf = %p, retval = %ld", buf,
-	   retval);
 
+    // Soil moisture level is 0-100 (1 byte). Only read 1 byte. If
+    // user tries to read multiple bytes, that will result in multiple
+    // calls to read. But reading >1 is really a user mistake, so
+    // there is no need to try to optimize for it.
+    count = 1;
+
+    if (p_i2c_soil_dev->use_simulation)
+    {
+	// If simulation is on, return saved byte in dev struct
+	// copy_to_user returns number NOT copied, 0 on success.
+	if (copy_to_user(buf, &(p_i2c_soil_dev->sim_data), count))
+	{
+	    retval = -EFAULT;
+	}
+	else
+	{
+	    retval = count;
+	}
+    }
+    else
+    {
+	// Do I2C read here
+	retval = count;
+    }
+
+    PDEBUG("read: user buf = %p, retval = %ld", buf, retval);
     return retval;
 }
 
+// Returns negative on error, >=0 indicated # of bytes read.
 ssize_t i2c_soil_drv_write(struct file *filp, const char __user *buf,
 			   size_t count, loff_t *f_pos)
 {
     // Probably safe to assume the kernel doesn't pass a null filp
     struct i2c_soil_dev *p_i2c_soil_dev = (struct i2c_soil_dev *) filp->private_data;
     ssize_t retval = 0;
+    char cmd_buf[MAX_CMD_BUF_SIZE];
 
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
-    PDEBUG("write: user buf = %p, retval = %ld", buf,
-	   retval);
 
+    // User has written:
+    //  - Single byte of simulated data
+    //  - SIM_ON_CMD (ie, "simon" without quotes)
+    //  - SIM_OFF_CMD (ie, "simoff" without quotes)
+    if (1 == count)
+    {
+	if (p_i2c_soil_dev->use_simulation)
+	{
+	    // Soil moisture level is 0-100 (1 byte). Only read 1 byte. If
+	    // user tries to read multiple bytes, 
+	    // copy_from_user returns number NOT copied, 0 on success.
+	    if (copy_from_user(&(p_i2c_soil_dev->sim_data), buf, count))
+	    {
+		retval = -EFAULT;
+	    }
+	    else
+	    {
+		retval = count;
+	    }
+	    PDEBUG("1 byte write=0x%02x, sim mode on", p_i2c_soil_dev->sim_data);
+	}
+	else
+	{
+	    // Do nothing - ignore single byte writes if simulation is off
+	    PDEBUG("1 byte write ignored, sim mode off");
+	    // Return count to prevent subsequent calls (all data consumed)
+	    retval = count;
+	}
+    }
+    else // For multi-byte write, check for command
+    {
+	// copy_from_user returns number NOT copied, 0 on success.
+	// min() to avoid buffer overrun on stack
+	if (copy_from_user(cmd_buf, buf, min((size_t)MAX_CMD_BUF_SIZE, count)))
+	{
+	    retval = -EFAULT;
+	}
+	else
+	{
+	    if (!strncmp(cmd_buf,SIM_ON_CMD,strlen(SIM_ON_CMD)))
+	    {
+		p_i2c_soil_dev->use_simulation = 1;
+		//PDEBUG("sim mode enabled");
+		PDEBUG("sim mode enabled %ld", strlen(SIM_ON_CMD));
+	    }
+	    else if (!strncmp(cmd_buf,SIM_OFF_CMD,strlen(SIM_OFF_CMD)))
+	    {
+		p_i2c_soil_dev->use_simulation = 0;
+		//PDEBUG("sim mode disabled");
+		PDEBUG("sim mode disabled %ld", strlen(SIM_OFF_CMD));
+	    }
+	    else
+	    {
+		// Write data is unknown, ignore
+		cmd_buf[MAX_CMD_BUF_SIZE-1] = 0; // Force null term
+		PDEBUG("Unexpected multi-byte write, data=%s",cmd_buf);
+	    }
+	    // Return count to prevent subsequent calls (all data consumed)
+	    retval = count;
+	}
+    }
+
+    PDEBUG("write: user buf = %p, retval = %ld", buf, retval);
     return retval;
 }
 
 struct file_operations i2c_soil_drv_fops = {
     .owner          = THIS_MODULE,
-//    .llseek         = i2c_soil_drv_llseek,
     .read           = i2c_soil_drv_read,
-    .write          = i2c_soil_drv_write, // XXX - should be null for non-debug?
-//    .unlocked_ioctl = i2c_soil_drv_unlocked_ioctl,
+    .write          = i2c_soil_drv_write,
     .open           = i2c_soil_drv_open,
     .release        = i2c_soil_drv_release,
 };
@@ -109,6 +189,9 @@ static int i2c_soil_drv_init(void)
 	printk(KERN_WARNING "i2c-soil-drv: can't get major %d\n", i2c_soil_dev_major);
 	return retval;
     }
+
+    // Zero out soil dev - this will default simulation mode to off.
+    memset(&i2c_soil_device, 0, sizeof(struct i2c_soil_dev));
 
     cdev_init(&i2c_soil_device.cdev, &i2c_soil_drv_fops);
     i2c_soil_device.cdev.owner = THIS_MODULE;

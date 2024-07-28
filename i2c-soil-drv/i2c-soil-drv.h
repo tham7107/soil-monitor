@@ -26,10 +26,20 @@
 #  define PDEBUG(fmt, args...) /* not debugging: nothing */
 #endif
 
+// Writing these stings to the driver turn simulation mode on or off.
+// Using in-band control instead of ioctl's to simplify testing via
+// shell scripting w/ echo/dd/cat
+#define SIM_ON_CMD "sim-on"
+#define SIM_OFF_CMD "sim-off"
+#define MAX_CMD_BUF_SIZE 8
 
 struct i2c_soil_dev
 {
-    struct cdev cdev;     /* Char device structure      */
+    // cdev @ start - single inheritance, p_cdev = p_aesd_dev
+    // Don't really need to use container_of
+    struct cdev cdev;     // Char device structure
+    int use_simulation;	  // 1=simulation (no i2c), 0=i2c mode
+    int sim_data;         // When sim on, write updates this, read returns this
 };
 
 #endif // I2C_SOIL_DRV_H
