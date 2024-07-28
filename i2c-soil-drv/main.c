@@ -74,12 +74,14 @@ ssize_t i2c_soil_drv_read(struct file *filp, char __user *buf, size_t count,
 	}
 	else
 	{
+	    PDEBUG("1 byte read=0x%02x, sim mode on", p_i2c_soil_dev->sim_data);
 	    retval = count;
 	}
     }
     else
     {
 	// Do I2C read here
+	//PDEBUG("1 byte read=0x%02x, sim mode off", p_i2c_soil_dev->sim_data);
 	retval = count;
     }
 
@@ -140,14 +142,12 @@ ssize_t i2c_soil_drv_write(struct file *filp, const char __user *buf,
 	    if (!strncmp(cmd_buf,SIM_ON_CMD,strlen(SIM_ON_CMD)))
 	    {
 		p_i2c_soil_dev->use_simulation = 1;
-		//PDEBUG("sim mode enabled");
-		PDEBUG("sim mode enabled %ld", strlen(SIM_ON_CMD));
+		PDEBUG("sim mode enabled");
 	    }
 	    else if (!strncmp(cmd_buf,SIM_OFF_CMD,strlen(SIM_OFF_CMD)))
 	    {
 		p_i2c_soil_dev->use_simulation = 0;
-		//PDEBUG("sim mode disabled");
-		PDEBUG("sim mode disabled %ld", strlen(SIM_OFF_CMD));
+		PDEBUG("sim mode disabled");
 	    }
 	    else
 	    {
