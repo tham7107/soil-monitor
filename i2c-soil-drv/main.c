@@ -10,6 +10,7 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/cdev.h>
+#include <linux/i2c.h>
 
 #include "i2c-soil-drv.h"
 
@@ -187,7 +188,7 @@ static int i2c_soil_drv_init(void)
     if (retval < 0 )
     {
 	printk(KERN_WARNING "i2c-soil-drv: can't get major %d\n", i2c_soil_dev_major);
-	return retval;
+	goto alloc_chrdev_region_failed;
     }
 
     // Zero out soil dev - this will default simulation mode to off.
@@ -198,18 +199,46 @@ static int i2c_soil_drv_init(void)
      // Why doesn't cdev_init set cedv.ops?
     i2c_soil_device.cdev.ops   = &i2c_soil_drv_fops;
 
+    i2c_soil_device.p_i2c_adapter = i2c_get_adapter(I2C_BUS_NUM);
+    // Looking at i2c-core-base.c, returns NULL on error
+    if (!(i2c_soil_device.p_i2c_adapter))
+    {
+	printk(KERN_WARNING "i2c-soil-drv: i2c_get_adapter failed\n");
+	retval = -ENOMEM; // Guess...
+	goto i2c_get_adapter_failed;
+    }
+
+    i2c_soil_device.p_i2c_client =
+	i2c_new_dummy_device(i2c_soil_device.p_i2c_adapter, I2C_BUS_ADDR);
+    // see LDD3, pg 295 - ERR_PTR/IS_ERR/PTR_ERR
+    if (IS_ERR(i2c_soil_device.p_i2c_client))
+    {
+	printk(KERN_WARNING "i2c-soil-drv: i2c_new_dummy_device failed\n");
+	retval = PTR_ERR(i2c_soil_device.p_i2c_client);
+	goto i2c_new_dummy_failed;
+    }
+
     if ((retval = cdev_add(&i2c_soil_device.cdev, devnum, NUM_MINORS)) < 0 )
     {
 	printk(KERN_WARNING "i2c-soil-drv: cdev_add failed\n");
-	unregister_chrdev_region(devnum, NUM_MINORS);
-	return retval;
+	goto cdev_add_failed;
     }
 
     // Driver is "live" after successful cdev_add call
 
-    PDEBUG("i2c_soil_drv_init, major=%d, minor=%d, &i2c_soil_device=%p\n",
-	   MAJOR(devnum), MINOR(devnum), &i2c_soil_device);
+    PDEBUG("i2c_soil_drv_init, major=%d, minor=%d, &i2c_soil_device=%p, p_i2c_adapter=%p\n",
+	   MAJOR(devnum), MINOR(devnum), &i2c_soil_device,
+	   i2c_soil_device.p_i2c_adapter);
     return 0;
+
+cdev_add_failed:
+    i2c_unregister_device(i2c_soil_device.p_i2c_client);
+i2c_new_dummy_failed:
+    // Is there an adapter release (opposite of i2c_get_adapter)?
+i2c_get_adapter_failed:
+    unregister_chrdev_region(devnum, NUM_MINORS);
+alloc_chrdev_region_failed:
+    return retval;
 }
 
 static void i2c_soil_drv_cleanup(void)
@@ -220,6 +249,8 @@ static void i2c_soil_drv_cleanup(void)
 
     // Order is reverse of i2c_soil_drv_init
     cdev_del(&i2c_soil_device.cdev);
+    i2c_unregister_device(i2c_soil_device.p_i2c_client);
+    // Is there an adapter release (opposite of i2c_get_adapter)?
     unregister_chrdev_region(devnum, NUM_MINORS);
 }
 
