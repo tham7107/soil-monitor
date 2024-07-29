@@ -33,6 +33,10 @@
 #define SIM_OFF_CMD "sim-off"
 #define MAX_CMD_BUF_SIZE 8
 
+// On RPi, 1 is /dev/i2c-1, bus on gpio2/3
+#define I2C_BUS_NUM 1
+#define I2C_BUS_ADDR 0x36 // Hardcoded bus addr for Adafruit soil sensor
+
 struct i2c_soil_dev
 {
     // cdev @ start - single inheritance, p_cdev = p_aesd_dev
@@ -40,6 +44,8 @@ struct i2c_soil_dev
     struct cdev cdev;     // Char device structure
     int use_simulation;	  // 1=simulation (no i2c), 0=i2c mode
     int sim_data;         // When sim on, write updates this, read returns this
+    struct i2c_adapter *p_i2c_adapter;
+    struct i2c_client *p_i2c_client; // dummy client
 };
 
 #endif // I2C_SOIL_DRV_H
