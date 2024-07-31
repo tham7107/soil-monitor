@@ -41,11 +41,22 @@
 /*
  * Adafruit soil moisture sensor parameters.  See:
  *
+ * https://github.com/adafruit/Adafruit_CircuitPython_seesaw/blob/main/adafruit_seesaw/seesaw.py
  */
 #define I2C_BUS_ADDR		0x36 /* Hardcoded i2c addr */
 #define I2C_TOUCH_BASE_ADDR	0x0f
 #define I2C_TOUCH_OFFSET	0x10
-     
+#define I2C_MSEC_DELAY		10
+#define I2C_HIGH_OUT_OF_RANGE	4095
+#define I2C_MAX_REREADS		4
+#define I2C_READING_OUT_OF_BOUNDS(X) ((X < 0) || (X > I2C_HIGH_OUT_OF_RANGE))
+
+/* reading < I2C_MIN_DRY_READING returns 0, > I2C_MAX_WET_READING returns 255 */
+#define I2C_MIN_RAW_DRY_READING	0x2a0
+#define I2C_MAX_RAW_WET_READING	0x39f
+#define I2C_MIN_DRY_READING	0
+#define I2C_MAX_WET_READING	255
+
 struct i2c_soil_dev
 {
     /* cdev @ start - single inheritance, p_cdev = p_aesd_dev */
