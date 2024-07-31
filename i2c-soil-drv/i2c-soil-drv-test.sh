@@ -4,8 +4,8 @@
 # Test script for i2c soil driver
 # Thomas Ames, ECEA 5307, July 28, 2024
 #
-# Write values 0-100 to driver and verify reads back correctly.
-# Write values 100-0 to driver and verify reads back correctly.
+# Write values 0-255 to driver and verify reads back correctly.
+# Write values 255-0 to driver and verify reads back correctly.
 # Write 50 random values to driver and verify reads back correctly.
 # echo $((1 + $RANDOM % 10))
 # $RANDOM returns 0-32767
@@ -47,16 +47,16 @@ write_and_verify() {
 
 sim_on
 
-echo -n "Testing write/read 0..100... "
-for i in $(seq 0 1 100); do
+echo -n "Testing write/read 0..255... "
+for i in $(seq 0 1 255); do
     write_and_verify $i;
 done
 
 # If we get here, we pass. write_and_verify will exit if one iteration failed.
 echo "PASS"
 
-echo -n "Testing write/read 100..0... "
-for i in $(seq 100 -1 0); do
+echo -n "Testing write/read 255..0... "
+for i in $(seq 255 -1 0); do
     write_and_verify $i;
 done
 
@@ -64,7 +64,7 @@ echo "PASS"
 
 echo -n "Testing 50 random write/read values... "
 for i in $(seq 0 1 50); do
-    write_and_verify $(($RANDOM % 100));
+    write_and_verify $(($RANDOM % 256));
 done
 
 echo "PASS"
