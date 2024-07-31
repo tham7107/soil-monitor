@@ -1,18 +1,18 @@
-///////////////////////////////////////////////////////////////////////////
-//
-// i2c-soil-drv.h
-//
-// Include file for i2c soil moisture driver.
-//
-// Thomas Ames, July 25, 2024
-//
+/**************************************************************************
+ *
+ * i2c-soil-drv.h
+ *
+ * Include file for i2c soil moisture driver.
+ *
+ * Thomas Ames, July 25, 2024
+ */
 
 #ifndef I2C_SOIL_DRV_H
 #define I2C_SOIL_DRV_H
 
 #define I2C_SOIL_DRV_DEBUG 1
 
-// From scull driver
+/* From scull driver */
 #undef PDEBUG             /* undef it, just in case */
 #ifdef I2C_SOIL_DRV_DEBUG
 #  ifdef __KERNEL__
@@ -26,20 +26,46 @@
 #  define PDEBUG(fmt, args...) /* not debugging: nothing */
 #endif
 
-// Writing these stings to the driver turn simulation mode on or off.
-// Using in-band control instead of ioctl's to simplify testing via
-// shell scripting w/ echo/dd/cat
+/*
+ * Writing these stings to the driver turn simulation mode on or off.
+ * Using in-band control instead of ioctl's to simplify testing via
+ * shell scripting w/ echo/dd/cat
+ */
 #define SIM_ON_CMD "sim-on"
 #define SIM_OFF_CMD "sim-off"
 #define MAX_CMD_BUF_SIZE 8
 
+/* On RPi, 1 is /dev/i2c-1, bus on gpio2/3 */
+#define I2C_BUS_NUM 1
+
+/*
+ * Adafruit soil moisture sensor parameters.  See:
+ *
+ * https://github.com/adafruit/Adafruit_CircuitPython_seesaw/blob/main/adafruit_seesaw/seesaw.py
+ */
+#define I2C_BUS_ADDR		0x36 /* Hardcoded i2c addr */
+#define I2C_TOUCH_BASE_ADDR	0x0f
+#define I2C_TOUCH_OFFSET	0x10
+#define I2C_MSEC_DELAY		10
+#define I2C_HIGH_OUT_OF_RANGE	4095
+#define I2C_MAX_REREADS		4
+#define I2C_READING_OUT_OF_BOUNDS(X) ((X < 0) || (X > I2C_HIGH_OUT_OF_RANGE))
+
+/* reading < I2C_MIN_DRY_READING returns 0, > I2C_MAX_WET_READING returns 255 */
+#define I2C_MIN_RAW_DRY_READING	0x2a0
+#define I2C_MAX_RAW_WET_READING	0x39f
+#define I2C_MIN_DRY_READING	0
+#define I2C_MAX_WET_READING	255
+
 struct i2c_soil_dev
 {
-    // cdev @ start - single inheritance, p_cdev = p_aesd_dev
-    // Don't really need to use container_of
-    struct cdev cdev;     // Char device structure
-    int use_simulation;	  // 1=simulation (no i2c), 0=i2c mode
-    int sim_data;         // When sim on, write updates this, read returns this
+    /* cdev @ start - single inheritance, p_cdev = p_aesd_dev */
+    /* Don't really need to use container_of */
+    struct cdev cdev;		/* Char device structure */
+    struct i2c_adapter *p_i2c_adapter;
+    struct i2c_client *p_i2c_client; /* dummy client */
+    int use_simulation;	       /* 1=simulation (no i2c), 0=i2c mode */
+    unsigned char sim_data; /* When sim on, write updates this, read returns this */
 };
 
-#endif // I2C_SOIL_DRV_H
+#endif /* I2C_SOIL_DRV_H */
