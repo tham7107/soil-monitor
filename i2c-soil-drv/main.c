@@ -13,7 +13,7 @@
 #include <linux/i2c.h>
 #include <linux/delay.h>
 
-#include "i2c-soil-drv.h"
+#include "i2c-soil-drv-int.h"
 
 MODULE_AUTHOR("Thomas Ames");
 MODULE_LICENSE("Dual BSD/GPL");

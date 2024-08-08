@@ -1,16 +1,18 @@
 /**************************************************************************
  *
- * i2c-soil-drv.h
+ * i2c-soil-drv-int.h
  *
- * Include file for i2c soil moisture driver.
+ * Internal include file for i2c soil moisture driver.
  *
  * Thomas Ames, July 25, 2024
  */
 
-#ifndef I2C_SOIL_DRV_H
-#define I2C_SOIL_DRV_H
+#ifndef I2C_SOIL_DRV_INT_H
+#define I2C_SOIL_DRV_INT_H
 
-#define I2C_SOIL_DRV_DEBUG 1
+/*#define I2C_SOIL_DRV_DEBUG 1*/
+
+#include "i2c-soil-drv-api.h"
 
 /* From scull driver */
 #undef PDEBUG             /* undef it, just in case */
@@ -25,18 +27,6 @@
 #else
 #  define PDEBUG(fmt, args...) /* not debugging: nothing */
 #endif
-
-/*
- * Writing these stings to the driver turn simulation mode on or off.
- * Using in-band control instead of ioctl's to simplify testing via
- * shell scripting w/ echo/dd/cat
- */
-#define SIM_ON_CMD "sim-on"
-#define SIM_OFF_CMD "sim-off"
-#define MAX_CMD_BUF_SIZE 8
-
-/* On RPi, 1 is /dev/i2c-1, bus on gpio2/3 */
-#define I2C_BUS_NUM 1
 
 /*
  * Adafruit soil moisture sensor parameters.  See:
@@ -68,4 +58,4 @@ struct i2c_soil_dev
     unsigned char sim_data; /* When sim on, write updates this, read returns this */
 };
 
-#endif /* I2C_SOIL_DRV_H */
+#endif /* I2C_SOIL_DRV_INT_H */

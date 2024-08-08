@@ -38,7 +38,7 @@ int main()
     printf("\ngpio_enable(): ");
     if (gpio_enable()) {
 	perror("");
-	exit(1);
+	exit(EXIT_FAILURE);
     }
     printf("Success\n");
 
@@ -47,14 +47,14 @@ int main()
 	printf("gpio_on(): ");
 	if(gpio_on()) {
 	    perror("");
-	    exit(1);
+	    exit(EXIT_FAILURE);
 	}
 	printf("Success\n");
 	sleep(2);
 	printf("gpio_off(): ");
 	if(gpio_off()) {
 	    perror("");
-	    exit(1);
+	    exit(EXIT_FAILURE);
 	}
 	printf("Success\n");
 	sleep(2);
@@ -64,14 +64,14 @@ int main()
     printf("gpio_on(): ");
     if(gpio_on()) {
 	perror("");
-	exit(1);
+	exit(EXIT_FAILURE);
     }
     printf("Success\n");
     sleep(2);
     printf("gpio_disable(), should shut off output: ");
     if(gpio_disable()) {
 	perror("");
-	exit(1);
+	exit(EXIT_FAILURE);
     }
     printf("Success\n");
 }

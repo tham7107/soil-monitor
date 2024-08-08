@@ -5,17 +5,16 @@
 ## July 2023
 ##
 
-#CC ?= $(CROSS_COMPILE)gcc
-#CFLAGS ?= -Wall -Werror -g
-#LDFLAGS ?= -pthread
+# Must use override for variables passed in on the make command line.
+# https://www.gnu.org/software/make/manual/html_node/Override-Directive.html
+override CFLAGS += -I../i2c-soil-drv
 
-#all: soil-monitor gpio-test
-all: gpio-test
+all: soil-monitor gpio-test
 
 clean:
 	rm -f soil-monitor *.o
 
-soil-monitor: gpio.o
+soil-monitor: gpio.o soil-monitor.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 gpio-test: gpio.o gpio-test.o
