@@ -8,6 +8,8 @@
 # Must use override for variables passed in on the make command line.
 # https://www.gnu.org/software/make/manual/html_node/Override-Directive.html
 override CFLAGS += -I../i2c-soil-drv
+# paho-mqtt3c is MQTTClient, paho-mqtt3a is MQTTAsync
+override LDFLAGS += -l paho-mqtt3c
 
 all: soil-monitor gpio-test
 
